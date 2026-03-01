@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Spike Shop</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0f0f0f; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  .header { background: #1a1a1a; padding: 16px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #2a2a2a; }
+  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+  .header span { color: #4ade80; }
+
+  .filters { padding: 12px 16px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; background: #0f0f0f; border-bottom: 1px solid #1a1a1a; }
+  .filters::-webkit-scrollbar { display: none; }
+  .filter-btn { background: #1a1a1a; color: #aaa; border: 1px solid #2a2a2a; padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+  .filter-btn.active { background: #4ade80; color: #000; border-color: #4ade80; font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
+
+  .card { background: #1a1a1a; border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.15s; border: 1px solid #2a2a2a; }
+  .card:active { transform: scale(0.97); }
+  .card-img { width: 100%; aspect-ratio: 1; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+  .card-img img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+  .card-img .no-img { font-size: 36px; opacity: 0.3; }
+  .variants-badge { position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.6); color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 10px; }
+  .card-body { padding: 10px; }
+  .card-brand { font-size: 11px; color: #4ade80; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .card-name { font-size: 13px; font-weight: 600; line-height: 1.3; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-price { font-size: 15px; font-weight: 700; }
+  .card-price span { font-size: 11px; font-weight: 400; color: #888; }
+  .card-distance { font-size: 11px; color: #666; margin-top: 3px; }
+
+  .loader { text-align: center; padding: 60px 20px; color: #555; }
+  .spinner { width: 32px; height: 32px; border: 3px solid #222; border-top-color: #4ade80; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; padding: 20px; }
+  .page-btn { background: #1a1a1a; color: #fff; border: 1px solid #2a2a2a; padding: 8px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .page-btn:disabled { opacity: 0.3; cursor: default; }
+  .page-info { color: #666; font-size: 13px; }
+
+  /* ── Модалка ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; overflow-y: auto; }
+  .modal-overlay.open { display: block; }
+  .modal { background: #1a1a1a; min-height: 100vh; padding-bottom: 120px; }
+  .modal-close { position: sticky; top: 0; background: #1a1a1a; padding: 14px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-bottom: 1px solid #2a2a2a; z-index: 10; }
+  .modal-close svg { opacity: 0.7; }
+  .modal-close span { font-size: 15px; color: #aaa; }
+
+  /* ── Галерея ── */
+  .gallery { position: relative; background: #fff; aspect-ratio: 1; overflow: hidden; }
+  .gallery-img { width: 100%; height: 100%; object-fit: contain; padding: 16px; display: none; }
+  .gallery-img.active { display: block; }
+  .gallery-dots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(0,0,0,0.2); cursor: pointer; transition: background 0.2s; }
+  .dot.active { background: rgba(0,0,0,0.6); }
+  .gallery-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.1); border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .gallery-nav.prev { left: 8px; }
+  .gallery-nav.next { right: 8px; }
+
+  /* ── Контент модалки ── */
+  .modal-content { padding: 16px; }
+  .modal-brand { font-size: 12px; color: #4ade80; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .modal-name { font-size: 20px; font-weight: 700; line-height: 1.2; margin-bottom: 8px; }
+  .modal-distance { display: inline-block; background: #2a2a2a; color: #aaa; font-size: 12px; padding: 3px 10px; border-radius: 20px; margin-bottom: 14px; }
+  .modal-price { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  .modal-price-label { font-size: 12px; color: #666; margin-bottom: 20px; }
+
+  /* ── Расцветки ── */
+  .section-title { font-size: 13px; color: #888; margin-bottom: 10px; }
+  .section-title strong { color: #fff; }
+  .color-swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .color-swatch { width: 52px; height: 52px; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid #2a2a2a; background: #fff; transition: border-color 0.2s; flex-shrink: 0; }
+  .color-swatch.active { border-color: #4ade80; }
+  .color-swatch img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
+
+  /* ── Размеры ── */
+  .size-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .size-btn { background: #242424; color: #fff; border: 1px solid #333; width: 48px; height: 38px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+  .size-btn:active { transform: scale(0.95); }
+  .size-btn.selected { background: #4ade80; color: #000; border-color: #4ade80; font-weight: 700; }
+
+  .modal-desc { font-size: 14px; line-height: 1.6; color: #bbb; padding: 14px; background: #242424; border-radius: 10px; }
+
+  /* ── TG кнопка ── */
+  .tg-btn { position: fixed; bottom: 20px; left: 16px; right: 16px; background: #4ade80; color: #000; border: none; border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 700; cursor: pointer; display: none; align-items: center; justify-content: center; gap: 8px; text-decoration: none; z-index: 300; }
+  .tg-btn.visible { display: flex; }
+
+  .empty { text-align: center; padding: 60px 20px; color: #555; }
+  .empty .icon { font-size: 48px; margin-bottom: 12px; }
+  .count-bar { padding: 8px 16px; font-size: 12px; color: #555; }
+</style>
+</head>
+<body>
+
+<div class="header"><h1>Spike <span>Shop</span></h1></div>
+
+<div class="filters" id="filters">
+  <button class="filter-btn active" data-filter="all">Все</button>
+  <button class="filter-btn" data-filter="Спринт">Спринт</button>
+  <button class="filter-btn" data-filter="Средние дистанции">Средние</button>
+  <button class="filter-btn" data-filter="Длинные дистанции">Длинные</button>
+</div>
+
+<div class="count-bar" id="countBar"></div>
+<div class="grid" id="grid"></div>
+<div class="pagination" id="pagination"></div>
+
+<!-- Модальное окно -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-close" id="modalClose">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      <span>Назад</span>
+    </div>
+
+    <div class="gallery" id="gallery"></div>
+
+    <div class="modal-content">
+      <div class="modal-brand" id="mBrand"></div>
+      <div class="modal-name" id="mName"></div>
+      <div id="mDistanceWrap"><span class="modal-distance" id="mDistance"></span></div>
+      <div class="modal-price" id="mPrice"></div>
+      <div class="modal-price-label">Цена без учёта доставки</div>
+
+      <!-- Расцветки -->
+      <div id="variantsSection">
+        <div class="section-title">Расцветка: <strong id="variantCount"></strong></div>
+        <div class="color-swatches" id="colorSwatches"></div>
+      </div>
+
+      <!-- Размеры -->
+      <div class="section-title">Размер EU — выбери нужный:</div>
+      <div class="size-grid" id="sizeGrid"></div>
+
+      <div class="modal-desc" id="mDesc"></div>
+    </div>
+  </div>
+</div>
+
+<a class="tg-btn" id="tgBtn" href="#" target="_blank">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.069l-2.02 9.517c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.16 13.879 4.2 12.98c-.645-.204-.658-.645.136-.953l10.879-4.193c.537-.194 1.007.131.835.917l.512-.682z"/>
+  </svg>
+  Написать менеджеру
+</a>
+
+<script>
+const SUPABASE_URL = 'https://kvwtbupvcvyktgpsgnqu.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_T6ZV8_g_QSMHbCd3xCkHZQ_wp463TtL';
+const PAGE_SIZE = 20;
+const SIZES = ['36','37','38','39','40','41','42','43','44','45','46','47'];
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentPage = 0;
+let currentFilter = 'all';
+let allGrouped = [];
+let filteredGrouped = [];
+let galleryIndex = 0;
+let galleryImages = [];
+let currentProduct = null;
+let selectedSize = '';
+
+// ── Группировка дублей по названию ───────────────────────────────────────────
+function groupProducts(data) {
+  const map = {};
+  for (const p of data) {
+    const key = p.name.trim().toLowerCase();
+    if (!map[key]) {
+      map[key] = { ...p, variants: [{ images: p.images || [], price_rub: p.price_rub }] };
+    } else {
+      map[key].variants.push({ images: p.images || [], price_rub: p.price_rub });
+      if (p.price_rub && p.price_rub < map[key].price_rub) map[key].price_rub = p.price_rub;
+    }
+  }
+  return Object.values(map);
+}
+
+// ── Загрузка всех товаров ─────────────────────────────────────────────────────
+async function loadProducts() {
+  document.getElementById('grid').innerHTML = '<div class="loader"><div class="spinner"></div>Загружаем товары...</div>';
+  document.getElementById('pagination').innerHTML = '';
+
+  const { data, error } = await db
+    .from('products')
+    .select('*')
+    .eq('category', 'spikes')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    document.getElementById('grid').innerHTML = '<div class="empty"><div class="icon">⚠️</div>Ошибка загрузки</div>';
+    return;
+  }
+
+  allGrouped = groupProducts(data || []);
+  applyFilter();
+}
+
+// ── Фильтр ────────────────────────────────────────────────────────────────────
+function applyFilter() {
+  filteredGrouped = currentFilter === 'all'
+    ? allGrouped
+    : allGrouped.filter(p => p.distance && p.distance.includes(currentFilter));
+  currentPage = 0;
+  renderGrid();
+}
+
+// ── Сетка ─────────────────────────────────────────────────────────────────────
+function renderGrid() {
+  const pageData = filteredGrouped.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+  document.getElementById('countBar').textContent = `${filteredGrouped.length} моделей`;
+
+  if (!pageData.length) {
+    document.getElementById('grid').innerHTML = '<div class="empty"><div class="icon">👟</div>Товары не найдены</div>';
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  document.getElementById('grid').innerHTML = pageData.map(p => {
+    const img = p.variants[0].images?.[0];
+    const cnt = p.variants.length;
+    return `
+      <div class="card" onclick='openProduct(${JSON.stringify(JSON.stringify(p))})'>
+        <div class="card-img">
+          ${img ? `<img src="${img}" alt="${p.name}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=no-img>👟</div>'">` : '<div class="no-img">👟</div>'}
+          ${cnt > 1 ? `<div class="variants-badge">${cnt} цвета</div>` : ''}
+        </div>
+        <div class="card-body">
+          <div class="card-brand">${p.brand || ''}</div>
+          <div class="card-name">${p.name}</div>
+          <div class="card-price"><span>от </span>${p.price_rub ? p.price_rub.toLocaleString('ru') + ' ₽' : 'по запросу'}</div>
+          ${p.distance ? `<div class="card-distance">${p.distance}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  renderPagination();
+}
+
+// ── Пагинация ─────────────────────────────────────────────────────────────────
+function renderPagination() {
+  const total = Math.ceil(filteredGrouped.length / PAGE_SIZE);
+  if (total <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+  document.getElementById('pagination').innerHTML = `
+    <button class="page-btn" onclick="changePage(-1)" ${currentPage === 0 ? 'disabled' : ''}>← Назад</button>
+    <span class="page-info">${currentPage + 1} / ${total}</span>
+    <button class="page-btn" onclick="changePage(1)" ${currentPage >= total - 1 ? 'disabled' : ''}>Вперёд →</button>`;
+}
+
+function changePage(dir) { currentPage += dir; window.scrollTo(0, 0); renderGrid(); }
+
+document.getElementById('filters').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = btn.dataset.filter;
+  applyFilter();
+});
+
+// ── Открытие карточки ─────────────────────────────────────────────────────────
+function openProduct(jsonStr) {
+  currentProduct = JSON.parse(jsonStr);
+  selectedSize = '';
+
+  document.getElementById('mBrand').textContent = currentProduct.brand || '';
+  document.getElementById('mName').textContent = currentProduct.name;
+  document.getElementById('mPrice').textContent = currentProduct.price_rub
+    ? `от ${currentProduct.price_rub.toLocaleString('ru')} ₽` : 'Цена по запросу';
+
+  const dist = currentProduct.distance;
+  document.getElementById('mDistanceWrap').style.display = dist ? 'block' : 'none';
+  if (dist) document.getElementById('mDistance').textContent = dist;
+
+  document.getElementById('mDesc').textContent = currentProduct.description || 'Описание отсутствует';
+
+  // Расцветки
+  const vs = document.getElementById('variantsSection');
+  if (currentProduct.variants.length > 1) {
+    vs.style.display = 'block';
+    document.getElementById('variantCount').textContent = `${currentProduct.variants.length} варианта`;
+    document.getElementById('colorSwatches').innerHTML = currentProduct.variants.map((v, i) => {
+      const t = v.images?.[0] || '';
+      return `<div class="color-swatch ${i === 0 ? 'active' : ''}" onclick="switchVariant(${i})">
+        ${t ? `<img src="${t}" onerror="this.style.display='none'">` : ''}
+      </div>`;
+    }).join('');
+  } else {
+    vs.style.display = 'none';
+  }
+
+  // Размеры
+  document.getElementById('sizeGrid').innerHTML = SIZES.map(s =>
+    `<button class="size-btn" onclick="selectSize('${s}', this)">${s}</button>`
+  ).join('');
+
+  renderGallery(currentProduct.variants[0].images || []);
+  updateTgBtn();
+
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('modal').scrollTop = 0;
+  document.getElementById('tgBtn').classList.add('visible');
+  document.body.style.overflow = 'hidden';
+}
+
+// ── Переключение расцветки ────────────────────────────────────────────────────
+function switchVariant(i) {
+  document.querySelectorAll('.color-swatch').forEach((el, idx) => el.classList.toggle('active', idx === i));
+  const v = currentProduct.variants[i];
+  renderGallery(v.images || []);
+  if (v.price_rub) document.getElementById('mPrice').textContent = `от ${v.price_rub.toLocaleString('ru')} ₽`;
+  updateTgBtn();
+}
+
+// ── Выбор размера ─────────────────────────────────────────────────────────────
+function selectSize(size, btn) {
+  selectedSize = size;
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  updateTgBtn();
+}
+
+// ── TG ссылка с предзаполненным сообщением ───────────────────────────────────
+function updateTgBtn() {
+  const name = currentProduct?.name || '';
+  const size = selectedSize ? `, размер EU ${selectedSize}` : '';
+  document.getElementById('tgBtn').href =
+    `https://t.me/Lockerrrr?text=${encodeURIComponent(`Здравствуйте! Интересует ${name}${size}`)}`;
+}
+
+// ── Галерея ───────────────────────────────────────────────────────────────────
+function renderGallery(images) {
+  galleryImages = images; galleryIndex = 0;
+  const g = document.getElementById('gallery');
+  if (!images.length) { g.style.display = 'none'; return; }
+  g.style.display = 'block';
+  g.innerHTML = images.map((img, i) =>
+    `<img class="gallery-img ${i === 0 ? 'active' : ''}" src="${img}" onerror="this.style.display='none'">`
+  ).join('') + (images.length > 1 ? `
+    <div class="gallery-dots">${images.map((_, i) => `<div class="dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>`).join('')}</div>
+    <button class="gallery-nav prev" onclick="prevSlide()">‹</button>
+    <button class="gallery-nav next" onclick="nextSlide()">›</button>` : '');
+}
+
+function goToSlide(i) {
+  document.querySelectorAll('.gallery-img').forEach((el, idx) => el.classList.toggle('active', idx === i));
+  document.querySelectorAll('.dot').forEach((el, idx) => el.classList.toggle('active', idx === i));
+  galleryIndex = i;
+}
+function nextSlide() { goToSlide((galleryIndex + 1) % galleryImages.length); }
+function prevSlide() { goToSlide((galleryIndex - 1 + galleryImages.length) % galleryImages.length); }
+
+document.getElementById('modalClose').addEventListener('click', () => {
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('tgBtn').classList.remove('visible');
+  document.body.style.overflow = '';
+});
+
+loadProducts();
+</script>
+</body>
+</html>
