@@ -10,7 +10,6 @@ export default function ProductCard({ product, onClick }) {
       onClick={() => onClick(product)}
       className="bg-zinc-900 rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 active:scale-95 hover:scale-[1.02] hover:shadow-xl hover:shadow-black/50"
     >
-      {/* Фото — белый фон чтобы шиповка была видна целиком */}
       <div className="relative bg-white aspect-square flex items-center justify-center p-3">
         {!loaded && (
           <div className="absolute inset-0 bg-zinc-200 animate-pulse rounded-t-2xl" />
@@ -19,6 +18,7 @@ export default function ProductCard({ product, onClick }) {
           <img
             src={images[imgIndex]}
             alt={product.name}
+            loading="lazy"
             onLoad={() => setLoaded(true)}
             className={`w-full h-full object-contain transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
             onError={(e) => { e.target.src = 'https://placehold.co/300x300?text=No+Image' }}
@@ -27,7 +27,6 @@ export default function ProductCard({ product, onClick }) {
           <div className="text-zinc-400 text-xs">Нет фото</div>
         )}
 
-        {/* Бейдж скидки */}
         {product.original_price_eur && (
           <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
             -{Math.round((1 - product.price_eur / product.original_price_eur) * 100)}%
@@ -35,7 +34,6 @@ export default function ProductCard({ product, onClick }) {
         )}
       </div>
 
-      {/* Точки переключения цветов */}
       {images.length > 1 && (
         <div className="flex gap-1.5 justify-center py-2 bg-zinc-900">
           {images.map((_, i) => (
@@ -48,7 +46,6 @@ export default function ProductCard({ product, onClick }) {
         </div>
       )}
 
-      {/* Текст */}
       <div className="px-3 pb-3 pt-1">
         <p className="text-zinc-400 text-xs">{product.brand}</p>
         <p className="text-white text-sm font-semibold leading-tight line-clamp-2 mt-0.5">{product.name}</p>

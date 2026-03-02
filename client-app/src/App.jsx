@@ -25,7 +25,11 @@ export default function App() {
 
   async function fetchProducts() {
     setLoading(true)
-    let query = supabase.from('products').select('*').order('price_rub', { ascending: true })
+    let query = supabase
+      .from('products')
+      .select('*')
+      .order('price_rub', { ascending: true })
+      .limit(20)
     if (filter) query = query.ilike('distance', `%${filter}%`)
     const { data, error } = await query
     if (!error) setProducts(data)
@@ -106,6 +110,7 @@ export default function App() {
                       <img
                         src={product.images?.[0]}
                         alt={product.name}
+                        loading="lazy"
                         className="w-full h-full object-contain mix-blend-multiply p-1"
                       />
                     </div>
@@ -155,8 +160,6 @@ export default function App() {
     const images = selected.images || []
     return (
       <div className="min-h-screen bg-[#0a0a0a] text-white font-sans pb-10">
-
-        {/* Шапка */}
         <div className="fixed top-0 w-full bg-[#0a0a0a]/80 backdrop-blur-md z-30 px-4 py-4 flex items-center justify-between border-b border-white/5">
           <button
             onClick={() => setSelected(null)}
@@ -166,7 +169,6 @@ export default function App() {
               <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
-
           <button
             onClick={() => setCartOpen(true)}
             className="relative w-10 h-10 bg-white/10 rounded-full flex items-center justify-center active:scale-90 transition-transform"
@@ -184,7 +186,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Фото (в белой карточке) со свайпом и стрелками */}
         <div
           className="pt-20 px-4 pb-4 select-none"
           onTouchStart={handleTouchStart}
@@ -195,10 +196,9 @@ export default function App() {
               key={activeImg}
               src={images[activeImg]}
               alt={selected.name}
+              loading="lazy"
               className="w-full h-full object-contain mix-blend-multiply animate-fadeIn"
             />
-
-            {/* Стрелки (тёмные, так как фон карточки белый) */}
             {images.length > 1 && (
               <>
                 <button
@@ -222,7 +222,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Точки переключения под фото */}
         {images.length > 1 && (
           <div className="flex gap-2 justify-center pb-4">
             {images.map((_, i) => (
@@ -235,7 +234,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Текстовый блок */}
         <div className="px-5 pt-2">
           <p className="text-zinc-400 text-sm font-medium tracking-wide mb-1.5 uppercase">{selected.brand}</p>
           <h1 className="text-2xl font-semibold leading-tight mb-4 text-zinc-100">{selected.name}</h1>
@@ -261,7 +259,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Красивый блок с описанием */}
           <div className="bg-white/5 border border-white/5 rounded-2xl p-5 mb-8 shadow-inner">
             <p className="text-zinc-300 text-sm leading-relaxed whitespace-pre-line font-light">
               {selected.description}
@@ -319,7 +316,9 @@ export default function App() {
         {loading ? (
           <div className="grid grid-cols-2 gap-4">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white/5 rounded-2xl aspect-[3/4] animate-pulse" />
+              <div key={i} className="bg-white/5 rounded-2xl aspect-[3/4] overflow-hidden relative">
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              </div>
             ))}
           </div>
         ) : (
