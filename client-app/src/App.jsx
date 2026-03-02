@@ -17,12 +17,17 @@ export default function App() {
   const [activeImg, setActiveImg] = useState(0)
   const [cart, setCart] = useState([])
   const [cartOpen, setCartOpen] = useState(false)
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [cartOpen])
+  
   const [addedAnim, setAddedAnim] = useState(false)
   const touchStartX = useRef(null)
 
   useEffect(() => { fetchProducts() }, [filter])
   useEffect(() => {
     setActiveImg(0)
+    window.scrollTo(0, 0)
     if (selected?.images) {
       selected.images.forEach(src => {
         const img = new Image()
