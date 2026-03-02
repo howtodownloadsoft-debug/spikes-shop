@@ -21,7 +21,16 @@ export default function App() {
   const touchStartX = useRef(null)
 
   useEffect(() => { fetchProducts() }, [filter])
-  useEffect(() => { setActiveImg(0) }, [selected])
+  useEffect(() => {
+    setActiveImg(0)
+    if (selected?.images) {
+      selected.images.forEach(src => {
+        const img = new Image()
+        img.src = src
+      })
+    }
+  }, [selected])
+  
 
   async function fetchProducts() {
     setLoading(true)

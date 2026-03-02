@@ -1,9 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function ProductCard({ product, onClick }) {
   const [imgIndex, setImgIndex] = useState(0)
   const [loaded, setLoaded] = useState(false)
   const images = product.images || []
+
+  useEffect(() => {
+    images.forEach(src => {
+      const img = new Image()
+      img.src = src
+    })
+  }, [])
 
   return (
     <div
