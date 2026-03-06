@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo, memo } from 'react'
 import { supabase } from './supabaseClient'
 import ProductCard from './components/ProductCard'
 
@@ -15,26 +15,43 @@ const SUB_CATS = {
   'Аксессуары': ['Все', 'Рюкзаки/Сумки', 'Носки', 'Разное'],
 }
 
-// ✅ ИЗМЕНЕНИЕ 1: убраны Кросс и Универсальные
 const DISTANCES = ['Все', 'Спринт', 'Средние', 'Длинные', 'Прыжки', 'Метания']
 
 const SHOE_SIZES    = ['36','37','37.5','38','38.5','39','40','40.5','41','42','42.5','43','44','44.5','45','46','47']
 const CLOTHES_SIZES = ['XS','S','M','L','XL','XXL']
 
+// 🔑 Вынесен за пределы App и обёрнут в memo — не пересоздаётся при каждом рендере
+const CartBtn = memo(function CartBtn({ onOpen, itemCount, bounce }) {
+  return (
+    <button onClick={onOpen} className="relative w-10 h-10 bg-white/8 border border-white/5 rounded-full flex items-center justify-center active:scale-90 transition-transform">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" strokeLinecap="round" strokeLinejoin="round"/>
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <path d="M16 10a4 4 0 01-8 0" strokeLinecap="round"/>
+      </svg>
+      {itemCount > 0 && (
+        <span className={`absolute -top-1.5 -right-1.5 bg-[#FF5A00] text-white text-[10px] font-bold px-1.5 rounded-full min-w-[18px] text-center leading-none py-[3px] ${bounce ? 'cart-pop' : ''}`}>
+          {itemCount}
+        </span>
+      )}
+    </button>
+  )
+})
+
 export default function App() {
-  const [products, setProducts]       = useState([])
-  const [loading, setLoading]         = useState(true)
-  const [search, setSearch]           = useState('')
+  const [products, setProducts]         = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [search, setSearch]             = useState('')
   const [debouncedSearch, setDebounced] = useState('')
-  const [mainCat, setMainCat]         = useState('Все')
-  const [subCat, setSubCat]           = useState('Все')
-  const [distance, setDistance]       = useState('Все')
-  const [selected, setSelected]       = useState(null)
-  const [activeImg, setActiveImg]     = useState(0)
-  const [cart, setCart]               = useState([])
-  const [cartOpen, setCartOpen]       = useState(false)
-  const [cartBounce, setCartBounce]   = useState(false)
-  const [swipedItem, setSwipedItem]   = useState(null)
+  const [mainCat, setMainCat]           = useState('Все')
+  const [subCat, setSubCat]             = useState('Все')
+  const [distance, setDistance]         = useState('Все')
+  const [selected, setSelected]         = useState(null)
+  const [activeImg, setActiveImg]       = useState(0)
+  const [cart, setCart]                 = useState([])
+  const [cartOpen, setCartOpen]         = useState(false)
+  const [cartBounce, setCartBounce]     = useState(false)
+  const [swipedItem, setSwipedItem]     = useState(null)
 
   const [selectedSize, setSelectedSize] = useState(null)
   const [orderName, setOrderName]       = useState('')
@@ -46,6 +63,7 @@ export default function App() {
   const touchStartX    = useRef(null)
   const cartSwipeStart = useRef(null)
   const savedScrollY   = useRef(0)
+  const fetchCache     = useRef({}) // 🔑 кэш запросов по ключу фильтров
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 300)
@@ -83,15 +101,27 @@ export default function App() {
   }, [selected, selectedSize, orderName, orderPhone, orderAddress, orderSent])
 
   async function fetchProducts() {
+    const key = `${mainCat}|${subCat}|${distance}|${debouncedSearch}`
+
+    // 🔑 Есть кэш — показываем мгновенно без skeleton
+    if (fetchCache.current[key]) {
+      setProducts(fetchCache.current[key])
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     let q = supabase.from('products_v2').select('*').order('price_rub', { ascending: true }).limit(100)
     if (mainCat !== 'Все') q = q.eq('main_category', mainCat)
-    if (subCat !== 'Все')  q = q.eq('sub_category', subCat)
-    // ✅ ИЗМЕНЕНИЕ 2: правильный фильтр для массива дистанций
+    if (subCat  !== 'Все') q = q.eq('sub_category', subCat)
     if (distance !== 'Все') q = q.contains('attributes', { distance: [distance] })
     if (debouncedSearch.trim()) q = q.ilike('name', `%${debouncedSearch.trim()}%`)
     const { data, error } = await q
-    if (!error) setProducts(data || [])
+    if (!error) {
+      const result = data || []
+      fetchCache.current[key] = result // 🔑 сохраняем в кэш
+      setProducts(result)
+    }
     setLoading(false)
   }
 
@@ -115,12 +145,17 @@ export default function App() {
     return SHOE_SIZES
   }
 
-  function openProduct(p) { savedScrollY.current = window.scrollY; haptic('medium'); setSelected(p) }
+  // 🔑 useCallback — стабильная ссылка, memo на ProductCard работает
+  const openProduct = useCallback((p) => {
+    savedScrollY.current = window.scrollY; haptic('medium'); setSelected(p)
+  }, [])
+
   function closeProduct()  { setSelected(null); requestAnimationFrame(() => window.scrollTo(0, savedScrollY.current)) }
   function openCart()      { savedScrollY.current = window.scrollY; haptic(); setCartOpen(true); window.scrollTo(0, 0) }
   function closeCart()     { setCartOpen(false); setSwipedItem(null); requestAnimationFrame(() => window.scrollTo(0, savedScrollY.current)) }
 
-  function addToCart(product) {
+  // 🔑 useCallback — стабильная ссылка для addToCart
+  const addToCart = useCallback((product) => {
     haptic('medium')
     setCart(prev => {
       const ex = prev.find(i => i.product.id === product.id)
@@ -128,11 +163,13 @@ export default function App() {
                 : [...prev, { product, quantity: 1 }]
     })
     setCartBounce(true); setTimeout(() => setCartBounce(false), 500)
-  }
+  }, [])
 
   function removeFromCart(id) { haptic('light'); setCart(p => p.filter(i => i.product.id !== id)); setSwipedItem(null) }
-  function totalItems() { return cart.reduce((s, i) => s + i.quantity, 0) }
-  function totalPrice() { return cart.reduce((s, i) => s + i.product.price_rub * i.quantity, 0) }
+
+  // 🔑 useMemo — не пересчитывается без нужды
+  const totalItems = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart])
+  const totalPrice = useMemo(() => cart.reduce((s, i) => s + i.product.price_rub * i.quantity, 0), [cart])
 
   function handleTouchStart(e) { touchStartX.current = e.touches[0].clientX }
   function handleTouchEnd(e, len) {
@@ -149,23 +186,6 @@ export default function App() {
     cartSwipeStart.current = null
   }
 
-  function CartBtn() {
-    return (
-      <button onClick={openCart} className="relative w-10 h-10 bg-white/8 border border-white/5 rounded-full flex items-center justify-center active:scale-90 transition-transform">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" strokeLinecap="round" strokeLinejoin="round"/>
-          <line x1="3" y1="6" x2="21" y2="6"/>
-          <path d="M16 10a4 4 0 01-8 0" strokeLinecap="round"/>
-        </svg>
-        {totalItems() > 0 && (
-          <span className={`absolute -top-1.5 -right-1.5 bg-[#FF5A00] text-white text-[10px] font-bold px-1.5 rounded-full min-w-[18px] text-center leading-none py-[3px] ${cartBounce ? 'cart-pop' : ''}`}>
-            {totalItems()}
-          </span>
-        )}
-      </button>
-    )
-  }
-
   // ─── КОРЗИНА ──────────────────────────────────────────────────────────────────
   if (cartOpen) return (
     <div className="min-h-screen bg-[#0F1115] text-white font-sans pb-10 page-enter">
@@ -176,7 +196,7 @@ export default function App() {
           </svg>
         </button>
         <h1 className="text-lg font-bold">Корзина</h1>
-        {totalItems() > 0 && <span className="ml-auto text-sm text-zinc-500">{totalItems()} шт.</span>}
+        {totalItems > 0 && <span className="ml-auto text-sm text-zinc-500">{totalItems} шт.</span>}
       </div>
 
       <div className="pt-20 px-4">
@@ -228,8 +248,8 @@ export default function App() {
               ))}
             </div>
             <div className="bg-[#1C1E24] border border-white/5 rounded-2xl p-5 mb-6">
-              <div className="flex justify-between text-sm text-zinc-500 mb-2"><span>Товаров</span><span>{totalItems()} шт.</span></div>
-              <div className="flex justify-between font-bold text-lg"><span>Итого</span><span className="text-[#FF5A00]">{totalPrice().toLocaleString('ru-RU')} ₽</span></div>
+              <div className="flex justify-between text-sm text-zinc-500 mb-2"><span>Товаров</span><span>{totalItems} шт.</span></div>
+              <div className="flex justify-between font-bold text-lg"><span>Итого</span><span className="text-[#FF5A00]">{totalPrice.toLocaleString('ru-RU')} ₽</span></div>
             </div>
             <button onClick={() => haptic('heavy')} className="w-full bg-[#FF5A00] text-white font-bold py-4 rounded-2xl active:scale-[0.97] transition-transform text-base shadow-lg shadow-[#FF5A00]/25">
               Оформить заказ
@@ -255,7 +275,7 @@ export default function App() {
               <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
-          <CartBtn />
+          <CartBtn onOpen={openCart} itemCount={totalItems} bounce={cartBounce} />
         </div>
 
         <div className="pt-[72px] px-4 pb-3 select-none" onTouchStart={handleTouchStart} onTouchEnd={(e) => handleTouchEnd(e, images.length)}>
@@ -292,7 +312,6 @@ export default function App() {
               <p className="text-[#888] text-xs font-semibold tracking-widest uppercase">{selected.brand}</p>
               <h1 className="text-2xl font-bold leading-tight text-white mt-1">{selected.name}</h1>
             </div>
-            {/* ✅ ИЗМЕНЕНИЕ 3: правильный рендер массива дистанций */}
             {distVal && distVal.length > 0 && (
               <span className="mt-2 flex-shrink-0 bg-[#FF5A00]/15 border border-[#FF5A00]/30 text-[#FF5A00] text-xs font-bold px-3 py-1.5 rounded-full">
                 {Array.isArray(distVal) ? distVal.join(' · ') : distVal}
@@ -379,11 +398,12 @@ export default function App() {
   // ─── КАТАЛОГ ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#0F1115] text-white pb-8 font-sans">
-      <div className="sticky top-0 bg-[#0F1115]/95 backdrop-blur-md z-10 border-b border-white/5">
+      {/* 🔑 Убран backdrop-blur — главный виновник чёрного экрана при скролле */}
+      <div className="sticky top-0 bg-[#0F1115] z-10 border-b border-white/5">
         <div className="px-4 pt-5 pb-3">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-black tracking-tight">Каталог</h1>
-            <CartBtn />
+            <CartBtn onOpen={openCart} itemCount={totalItems} bounce={cartBounce} />
           </div>
 
           <div className="relative mb-3">
@@ -473,7 +493,11 @@ export default function App() {
         ) : (
           <div className="grid grid-cols-2 gap-4">
             {products.map((p, i) => (
-              <div key={p.id} className="card-stagger" style={{ animationDelay: `${i * 0.04}s` }}>
+              // 🔑 анимация только для первых 8 — не грузим 100 анимаций сразу
+              <div key={p.id}
+                className={i < 8 ? 'card-stagger' : undefined}
+                style={i < 8 ? { animationDelay: `${i * 0.04}s` } : undefined}
+              >
                 <ProductCard product={p} onClick={openProduct} />
               </div>
             ))}

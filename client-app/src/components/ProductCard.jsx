@@ -1,40 +1,42 @@
-import { useState, useEffect } from 'react'
+import { useState, memo } from 'react'
 
-export default function ProductCard({ product, onClick }) {
+const ProductCard = memo(function ProductCard({ product, onClick }) {
   const [imgIndex, setImgIndex] = useState(0)
   const [loaded, setLoaded]     = useState(false)
   const images   = product.images || []
   const distance = product.attributes?.distance
 
-  useEffect(() => {
-    images.forEach(src => { const img = new Image(); img.src = src })
-  }, [])
-
   return (
-    <div onClick={() => onClick(product)}
-      className="bg-[#1C1E24] border border-white/5 rounded-2xl overflow-hidden cursor-pointer transition-transform duration-150 active:scale-95">
-
+    <div
+      onClick={() => onClick(product)}
+      className="bg-[#1C1E24] border border-white/5 rounded-2xl overflow-hidden cursor-pointer transition-transform duration-150 active:scale-95"
+      style={{ contain: 'layout style paint' }} // 🔑 изолирует перерисовку
+    >
       <div className="relative bg-[#EBEBED] aspect-square flex items-center justify-center p-3">
-        {!loaded && <div className="absolute inset-0 bg-[#DDDDE0] animate-pulse rounded-t-2xl"/>}
+        {!loaded && (
+          <div className="absolute inset-0 bg-[#DDDDE0] animate-pulse rounded-t-2xl" />
+        )}
         {images.length > 0 ? (
-          <img src={images[imgIndex]} alt={product.name} loading="lazy"
+          <img
+            src={images[imgIndex]}
+            alt={product.name}
+            loading="lazy"
+            decoding="async" // 🔑 не блокирует main thread
             onLoad={() => setLoaded(true)}
             className={`w-full h-full object-contain mix-blend-multiply transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
-            onError={(e) => { e.target.src = 'https://placehold.co/300x300?text=No+Image' }}/>
+            onError={(e) => { e.target.src = 'https://placehold.co/300x300?text=No+Image' }}
+          />
         ) : (
           <div className="text-zinc-400 text-xs">Нет фото</div>
         )}
 
-        {/* Скидка */}
         {product.original_price_eur && (
           <div className="absolute top-2 left-2 bg-[#FF5A00] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
             -{Math.round((1 - product.price_eur / product.original_price_eur) * 100)}%
           </div>
         )}
-
-        {/* Бейдж дистанции — только для шиповок */}
         {distance && (
-          <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full border border-white/10">
+          <div className="absolute top-2 right-2 bg-black/50 text-white text-[9px] font-bold px-2 py-0.5 rounded-full border border-white/10">
             {distance}
           </div>
         )}
@@ -43,8 +45,11 @@ export default function ProductCard({ product, onClick }) {
       {images.length > 1 && (
         <div className="flex gap-1.5 justify-center py-2 bg-[#1C1E24]">
           {images.map((_, i) => (
-            <button key={i} onClick={(e) => { e.stopPropagation(); setImgIndex(i); setLoaded(false) }}
-              className={`h-1.5 rounded-full transition-all duration-300 ${i === imgIndex ? 'bg-[#FF5A00] w-4' : 'bg-white/20 w-1.5'}`}/>
+            <button
+              key={i}
+              onClick={(e) => { e.stopPropagation(); setImgIndex(i); setLoaded(false) }}
+              className={`h-1.5 rounded-full transition-all duration-300 ${i === imgIndex ? 'bg-[#FF5A00] w-4' : 'bg-white/20 w-1.5'}`}
+            />
           ))}
         </div>
       )}
@@ -65,4 +70,6 @@ export default function ProductCard({ product, onClick }) {
       </div>
     </div>
   )
-}
+})
+
+export default ProductCard
