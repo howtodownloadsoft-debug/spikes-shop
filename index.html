@@ -7,96 +7,367 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0f0f0f; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
 
-  .header { background: #1a1a1a; padding: 16px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #2a2a2a; }
-  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
-  .header span { color: #4ade80; }
+  body {
+    background: #0F1115;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+  }
 
-  .filters { padding: 12px 16px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; background: #0f0f0f; border-bottom: 1px solid #1a1a1a; }
+  /* ── Шапка ── */
+  .header {
+    background: rgba(15,17,21,0.92);
+    /* GPU-слой для blur чтобы не лагало [web:17] */
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    will-change: backdrop-filter;
+    transform: translateZ(0);
+    padding: 14px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .header h1 { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .header span { color: #FF5A00; }
+
+  /* ── Фильтры (pill) ── */
+  .filters {
+    padding: 12px 16px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    background: #0F1115;
+  }
   .filters::-webkit-scrollbar { display: none; }
-  .filter-btn { background: #1a1a1a; color: #aaa; border: 1px solid #2a2a2a; padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
-  .filter-btn.active { background: #4ade80; color: #000; border-color: #4ade80; font-weight: 600; }
+  .filter-btn {
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.45);
+    border: none;
+    padding: 7px 18px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s;
+  }
+  .filter-btn.active {
+    background: #FF5A00;
+    color: #fff;
+    font-weight: 700;
+  }
 
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
+  /* ── Счётчик ── */
+  .count-bar { padding: 6px 16px 2px; font-size: 12px; color: rgba(255,255,255,0.25); }
 
-  .card { background: #1a1a1a; border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.15s; border: 1px solid #2a2a2a; }
-  .card:active { transform: scale(0.97); }
-  .card-img { width: 100%; aspect-ratio: 1; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
-  .card-img img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+  /* ── Сетка ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px 12px 24px;
+  }
+
+  /* ── Карточка + stagger-анимация ── */
+  .card {
+    background: #1C1E24;
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.05);
+    opacity: 0;
+    transform: translateY(18px);
+    animation: cardIn 0.38s ease forwards;
+  }
+  @keyframes cardIn { to { opacity: 1; transform: translateY(0); } }
+  .card:active { transform: scale(0.96) !important; transition: transform 0.1s; }
+
+  .card-img {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #EBEBED;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .card-img img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    padding: 6px;
+  }
   .card-img .no-img { font-size: 36px; opacity: 0.3; }
-  .variants-badge { position: absolute; bottom: 6px; right: 6px; background: rgba(0,0,0,0.6); color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 10px; }
-  .card-body { padding: 10px; }
-  .card-brand { font-size: 11px; color: #4ade80; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-  .card-name { font-size: 13px; font-weight: 600; line-height: 1.3; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .card-price { font-size: 15px; font-weight: 700; }
-  .card-price span { font-size: 11px; font-weight: 400; color: #888; }
-  .card-distance { font-size: 11px; color: #666; margin-top: 3px; }
+  .variants-badge {
+    position: absolute;
+    bottom: 6px; right: 6px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
 
-  .loader { text-align: center; padding: 60px 20px; color: #555; }
-  .spinner { width: 32px; height: 32px; border: 3px solid #222; border-top-color: #4ade80; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .card-body { padding: 10px 10px 12px; }
+  .card-brand {
+    font-size: 11px;
+    color: #888;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+  }
+  .card-name {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 7px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card-price { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; }
+  .card-distance { font-size: 11px; color: #555; margin-top: 3px; }
 
-  .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; padding: 20px; }
-  .page-btn { background: #1a1a1a; color: #fff; border: 1px solid #2a2a2a; padding: 8px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; }
-  .page-btn:disabled { opacity: 0.3; cursor: default; }
-  .page-info { color: #666; font-size: 13px; }
+  /* ── Skeleton-загрузка (вместо спиннера) ── */
+  .skeleton-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+  .skeleton-card {
+    background: #1C1E24;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .sk {
+    background: linear-gradient(90deg, #1C1E24 25%, #26292F 50%, #1C1E24 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  .sk-img { width: 100%; aspect-ratio: 1; }
+  .sk-body { padding: 10px; }
+  .sk-line { border-radius: 6px; margin-bottom: 8px; height: 10px; }
+  .sk-line.w40 { width: 40%; }
+  .sk-line.w80 { width: 80%; }
+  .sk-line.w60 { width: 60%; }
+  .sk-line.h16 { height: 16px; width: 45%; margin-bottom: 0; }
 
-  /* ── Модалка ── */
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; overflow-y: auto; }
+  /* ── Пагинация ── */
+  .pagination { display: flex; justify-content: center; align-items: center; gap: 12px; padding: 8px 20px 24px; }
+  .page-btn {
+    background: #1C1E24;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 8px 20px;
+    border-radius: 50px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .page-btn:disabled { opacity: 0.25; cursor: default; }
+  .page-info { color: #555; font-size: 13px; }
+
+  /* ── Модальное окно ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #0F1115;
+    z-index: 200;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   .modal-overlay.open { display: block; }
-  .modal { background: #1a1a1a; min-height: 100vh; padding-bottom: 120px; }
-  .modal-close { position: sticky; top: 0; background: #1a1a1a; padding: 14px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-bottom: 1px solid #2a2a2a; z-index: 10; }
-  .modal-close svg { opacity: 0.7; }
-  .modal-close span { font-size: 15px; color: #aaa; }
 
-  /* ── Галерея ── */
-  .gallery { position: relative; background: #fff; aspect-ratio: 1; overflow: hidden; }
-  .gallery-img { width: 100%; height: 100%; object-fit: contain; padding: 16px; display: none; }
-  .gallery-img.active { display: block; }
-  .gallery-dots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(0,0,0,0.2); cursor: pointer; transition: background 0.2s; }
-  .dot.active { background: rgba(0,0,0,0.6); }
-  .gallery-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.1); border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .modal-close {
+    position: sticky;
+    top: 0;
+    background: rgba(15,17,21,0.88);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    transform: translateZ(0);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    z-index: 10;
+  }
+  .modal-close span { font-size: 15px; color: rgba(255,255,255,0.45); }
+
+  /* ── Галерея (50% экрана) ── */
+  .gallery {
+    position: relative;
+    background: #EBEBED;
+    width: 100%;
+    /* занимает ~50% высоты экрана */
+    height: 50vw;
+    max-height: 340px;
+    overflow: hidden;
+  }
+  .gallery-img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    padding: 16px;
+    display: none;
+  }
+  .gallery-img.active { display: block; animation: fadeImg 0.18s ease; }
+  @keyframes fadeImg { from { opacity: 0.6; } to { opacity: 1; } }
+
+  .gallery-dots {
+    position: absolute;
+    bottom: 10px; left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+  }
+  .dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.22);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .dot.active { background: #FF5A00; width: 14px; border-radius: 3px; }
+
+  .gallery-nav {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    background: rgba(0,0,0,0.1);
+    border: none;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: #333;
+  }
   .gallery-nav.prev { left: 8px; }
   .gallery-nav.next { right: 8px; }
 
   /* ── Контент модалки ── */
-  .modal-content { padding: 16px; }
-  .modal-brand { font-size: 12px; color: #4ade80; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-  .modal-name { font-size: 20px; font-weight: 700; line-height: 1.2; margin-bottom: 8px; }
-  .modal-distance { display: inline-block; background: #2a2a2a; color: #aaa; font-size: 12px; padding: 3px 10px; border-radius: 20px; margin-bottom: 14px; }
-  .modal-price { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
-  .modal-price-label { font-size: 12px; color: #666; margin-bottom: 20px; }
+  .modal-content { padding: 16px 16px 140px; }
+  .modal-brand { font-size: 12px; color: #888; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+  .modal-name { font-size: 22px; font-weight: 800; line-height: 1.2; margin-bottom: 10px; letter-spacing: -0.3px; }
+  .modal-distance {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.45);
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+  .modal-price { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 2px; }
+  .modal-price-label { font-size: 12px; color: #555; margin-bottom: 22px; }
+
+  .section-label {
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
 
   /* ── Расцветки ── */
-  .section-title { font-size: 13px; color: #888; margin-bottom: 10px; }
-  .section-title strong { color: #fff; }
-  .color-swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
-  .color-swatch { width: 52px; height: 52px; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid #2a2a2a; background: #fff; transition: border-color 0.2s; flex-shrink: 0; }
-  .color-swatch.active { border-color: #4ade80; }
-  .color-swatch img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
+  .color-swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+  .color-swatch {
+    width: 50px; height: 50px;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.08);
+    background: #EBEBED;
+    transition: border-color 0.15s;
+    flex-shrink: 0;
+  }
+  .color-swatch.active { border-color: #FF5A00; }
+  .color-swatch img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
 
   /* ── Размеры ── */
-  .size-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-  .size-btn { background: #242424; color: #fff; border: 1px solid #333; width: 48px; height: 38px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
-  .size-btn:active { transform: scale(0.95); }
-  .size-btn.selected { background: #4ade80; color: #000; border-color: #4ade80; font-weight: 700; }
+  .size-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+  .size-btn {
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.08);
+    width: 48px; height: 40px;
+    border-radius: 10px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.13s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .size-btn.selected { background: #FF5A00; border-color: #FF5A00; font-weight: 700; }
+  .size-btn:active { transform: scale(0.92); }
 
-  .modal-desc { font-size: 14px; line-height: 1.6; color: #bbb; padding: 14px; background: #242424; border-radius: 10px; }
+  .modal-desc {
+    font-size: 14px;
+    line-height: 1.65;
+    color: rgba(255,255,255,0.45);
+    padding: 14px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
 
-  /* ── TG кнопка ── */
-  .tg-btn { position: fixed; bottom: 20px; left: 16px; right: 16px; background: #4ade80; color: #000; border: none; border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 700; cursor: pointer; display: none; align-items: center; justify-content: center; gap: 8px; text-decoration: none; z-index: 300; }
-  .tg-btn.visible { display: flex; }
+  /* ── Нижняя панель с blur [web:17] ── */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(15,17,21,0.88);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    transform: translateZ(0);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    z-index: 300;
+    display: none;
+  }
+  .bottom-bar.visible { display: block; }
 
-  .empty { text-align: center; padding: 60px 20px; color: #555; }
-  .empty .icon { font-size: 48px; margin-bottom: 12px; }
-  .count-bar { padding: 8px 16px; font-size: 12px; color: #555; }
+  .tg-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: #FF5A00;
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.1s, opacity 0.1s;
+    letter-spacing: -0.2px;
+  }
+  .tg-btn:active { transform: scale(0.97); opacity: 0.9; }
+
+  .empty { text-align: center; padding: 60px 20px; color: #444; }
+  .empty .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
 </style>
 </head>
 <body>
 
-<div class="header"><h1>Spike <span>Shop</span></h1></div>
+<div class="header">
+  <h1>Spike <span>Shop</span></h1>
+</div>
 
 <div class="filters" id="filters">
   <button class="filter-btn active" data-filter="all">Все</button>
@@ -106,49 +377,50 @@
 </div>
 
 <div class="count-bar" id="countBar"></div>
-<div class="grid" id="grid"></div>
+<div id="gridContainer"></div>
 <div class="pagination" id="pagination"></div>
 
 <!-- Модальное окно -->
 <div class="modal-overlay" id="modal">
-  <div class="modal">
-    <div class="modal-close" id="modalClose">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-        <path d="M19 12H5M12 5l-7 7 7 7"/>
-      </svg>
-      <span>Назад</span>
+  <div class="modal-close" id="modalClose">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2.5">
+      <path d="M19 12H5M12 5l-7 7 7 7"/>
+    </svg>
+    <span>Назад</span>
+  </div>
+
+  <div class="gallery" id="gallery"></div>
+
+  <div class="modal-content">
+    <div class="modal-brand" id="mBrand"></div>
+    <div class="modal-name" id="mName"></div>
+    <div id="mDistanceWrap">
+      <div class="modal-distance">🏃 <span id="mDistance"></span></div>
+    </div>
+    <div class="modal-price" id="mPrice"></div>
+    <div class="modal-price-label">Цена без учёта доставки</div>
+
+    <div id="variantsSection">
+      <div class="section-label">Расцветка — <span id="variantCount"></span></div>
+      <div class="color-swatches" id="colorSwatches"></div>
     </div>
 
-    <div class="gallery" id="gallery"></div>
+    <div class="section-label">Размер EU</div>
+    <div class="size-grid" id="sizeGrid"></div>
 
-    <div class="modal-content">
-      <div class="modal-brand" id="mBrand"></div>
-      <div class="modal-name" id="mName"></div>
-      <div id="mDistanceWrap"><span class="modal-distance" id="mDistance"></span></div>
-      <div class="modal-price" id="mPrice"></div>
-      <div class="modal-price-label">Цена без учёта доставки</div>
-
-      <!-- Расцветки -->
-      <div id="variantsSection">
-        <div class="section-title">Расцветка: <strong id="variantCount"></strong></div>
-        <div class="color-swatches" id="colorSwatches"></div>
-      </div>
-
-      <!-- Размеры -->
-      <div class="section-title">Размер EU — выбери нужный:</div>
-      <div class="size-grid" id="sizeGrid"></div>
-
-      <div class="modal-desc" id="mDesc"></div>
-    </div>
+    <div class="modal-desc" id="mDesc"></div>
   </div>
 </div>
 
-<a class="tg-btn" id="tgBtn" href="#" target="_blank">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.069l-2.02 9.517c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.16 13.879 4.2 12.98c-.645-.204-.658-.645.136-.953l10.879-4.193c.537-.194 1.007.131.835.917l.512-.682z"/>
-  </svg>
-  Написать менеджеру
-</a>
+<!-- Нижняя панель -->
+<div class="bottom-bar" id="bottomBar">
+  <a class="tg-btn" id="tgBtn" href="#" target="_blank">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.069l-2.02 9.517c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L7.16 13.879 4.2 12.98c-.645-.204-.658-.645.136-.953l10.879-4.193c.537-.194 1.007.131.835.917l.512-.682z"/>
+    </svg>
+    Написать менеджеру
+  </a>
+</div>
 
 <script>
 const SUPABASE_URL = 'https://kvwtbupvcvyktgpsgnqu.supabase.co';
@@ -167,6 +439,30 @@ let galleryIndex = 0;
 let galleryImages = [];
 let currentProduct = null;
 let selectedSize = '';
+let savedScrollY = 0; // ← для восстановления позиции скролла
+
+// ── Haptic (работает в Telegram WebApp) ───────────────────────────────────────
+function haptic(type = 'light') {
+  try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type); } catch(e) {}
+}
+
+// ── Skeleton вместо спиннера (убирает лаг восприятия) ─────────────────────────
+function showSkeleton() {
+  document.getElementById('gridContainer').innerHTML = `
+    <div class="skeleton-grid">
+      ${Array(6).fill(0).map(() => `
+        <div class="skeleton-card">
+          <div class="sk sk-img"></div>
+          <div class="sk-body">
+            <div class="sk sk-line w40"></div>
+            <div class="sk sk-line w80"></div>
+            <div class="sk sk-line w60"></div>
+            <div style="height:4px"></div>
+            <div class="sk sk-line h16"></div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
 
 // ── Группировка дублей по названию ───────────────────────────────────────────
 function groupProducts(data) {
@@ -183,9 +479,9 @@ function groupProducts(data) {
   return Object.values(map);
 }
 
-// ── Загрузка всех товаров ─────────────────────────────────────────────────────
+// ── Загрузка ──────────────────────────────────────────────────────────────────
 async function loadProducts() {
-  document.getElementById('grid').innerHTML = '<div class="loader"><div class="spinner"></div>Загружаем товары...</div>';
+  showSkeleton();
   document.getElementById('pagination').innerHTML = '';
 
   const { data, error } = await db
@@ -195,7 +491,8 @@ async function loadProducts() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    document.getElementById('grid').innerHTML = '<div class="empty"><div class="icon">⚠️</div>Ошибка загрузки</div>';
+    document.getElementById('gridContainer').innerHTML =
+      '<div class="empty"><div class="icon">⚠️</div>Ошибка загрузки</div>';
     return;
   }
 
@@ -212,34 +509,41 @@ function applyFilter() {
   renderGrid();
 }
 
-// ── Сетка ─────────────────────────────────────────────────────────────────────
+// ── Сетка с stagger-анимацией ─────────────────────────────────────────────────
 function renderGrid() {
   const pageData = filteredGrouped.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
   document.getElementById('countBar').textContent = `${filteredGrouped.length} моделей`;
 
   if (!pageData.length) {
-    document.getElementById('grid').innerHTML = '<div class="empty"><div class="icon">👟</div>Товары не найдены</div>';
+    document.getElementById('gridContainer').innerHTML =
+      '<div class="empty"><div class="icon">👟</div>Товары не найдены</div>';
     document.getElementById('pagination').innerHTML = '';
     return;
   }
 
-  document.getElementById('grid').innerHTML = pageData.map(p => {
-    const img = p.variants[0].images?.[0];
-    const cnt = p.variants.length;
-    return `
-      <div class="card" onclick='openProduct(${JSON.stringify(JSON.stringify(p))})'>
+  document.getElementById('gridContainer').innerHTML = `<div class="grid">${
+    pageData.map((p, i) => {
+      const img = p.variants[0].images?.[0];
+      const cnt = p.variants.length;
+      // stagger: каждая карточка появляется чуть позже предыдущей
+      return `<div class="card" style="animation-delay:${i * 0.042}s"
+                   onclick='openProduct(${JSON.stringify(JSON.stringify(p))})'>
         <div class="card-img">
-          ${img ? `<img src="${img}" alt="${p.name}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=no-img>👟</div>'">` : '<div class="no-img">👟</div>'}
+          ${img
+            ? `<img src="${img}" alt="${p.name}" loading="lazy"
+                    onerror="this.parentElement.innerHTML='<div class=no-img>👟</div>'">`
+            : '<div class="no-img">👟</div>'}
           ${cnt > 1 ? `<div class="variants-badge">${cnt} цвета</div>` : ''}
         </div>
         <div class="card-body">
           <div class="card-brand">${p.brand || ''}</div>
           <div class="card-name">${p.name}</div>
-          <div class="card-price"><span>от </span>${p.price_rub ? p.price_rub.toLocaleString('ru') + ' ₽' : 'по запросу'}</div>
+          <div class="card-price">${p.price_rub ? p.price_rub.toLocaleString('ru') + ' ₽' : 'по запросу'}</div>
           ${p.distance ? `<div class="card-distance">${p.distance}</div>` : ''}
         </div>
       </div>`;
-  }).join('');
+    }).join('')
+  }</div>`;
 
   renderPagination();
 }
@@ -253,27 +557,30 @@ function renderPagination() {
     <span class="page-info">${currentPage + 1} / ${total}</span>
     <button class="page-btn" onclick="changePage(1)" ${currentPage >= total - 1 ? 'disabled' : ''}>Вперёд →</button>`;
 }
-
 function changePage(dir) { currentPage += dir; window.scrollTo(0, 0); renderGrid(); }
 
+// ── Фильтры ───────────────────────────────────────────────────────────────────
 document.getElementById('filters').addEventListener('click', e => {
   const btn = e.target.closest('.filter-btn');
   if (!btn) return;
+  haptic();
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   currentFilter = btn.dataset.filter;
   applyFilter();
 });
 
-// ── Открытие карточки ─────────────────────────────────────────────────────────
+// ── Открытие товара ───────────────────────────────────────────────────────────
 function openProduct(jsonStr) {
+  haptic('medium');
+  savedScrollY = window.scrollY; // ← запоминаем где были
   currentProduct = JSON.parse(jsonStr);
   selectedSize = '';
 
   document.getElementById('mBrand').textContent = currentProduct.brand || '';
   document.getElementById('mName').textContent = currentProduct.name;
   document.getElementById('mPrice').textContent = currentProduct.price_rub
-    ? `от ${currentProduct.price_rub.toLocaleString('ru')} ₽` : 'Цена по запросу';
+    ? `${currentProduct.price_rub.toLocaleString('ru')} ₽` : 'Цена по запросу';
 
   const dist = currentProduct.distance;
   document.getElementById('mDistanceWrap').style.display = dist ? 'block' : 'none';
@@ -304,30 +611,33 @@ function openProduct(jsonStr) {
   renderGallery(currentProduct.variants[0].images || []);
   updateTgBtn();
 
-  document.getElementById('modal').classList.add('open');
-  document.getElementById('modal').scrollTop = 0;
-  document.getElementById('tgBtn').classList.add('visible');
+  const modal = document.getElementById('modal');
+  modal.classList.add('open');
+  modal.scrollTop = 0;
+  document.getElementById('bottomBar').classList.add('visible');
   document.body.style.overflow = 'hidden';
 }
 
-// ── Переключение расцветки ────────────────────────────────────────────────────
+// ── Расцветки ─────────────────────────────────────────────────────────────────
 function switchVariant(i) {
+  haptic();
   document.querySelectorAll('.color-swatch').forEach((el, idx) => el.classList.toggle('active', idx === i));
   const v = currentProduct.variants[i];
   renderGallery(v.images || []);
-  if (v.price_rub) document.getElementById('mPrice').textContent = `от ${v.price_rub.toLocaleString('ru')} ₽`;
+  if (v.price_rub) document.getElementById('mPrice').textContent = `${v.price_rub.toLocaleString('ru')} ₽`;
   updateTgBtn();
 }
 
-// ── Выбор размера ─────────────────────────────────────────────────────────────
+// ── Размеры ───────────────────────────────────────────────────────────────────
 function selectSize(size, btn) {
+  haptic();
   selectedSize = size;
   document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   updateTgBtn();
 }
 
-// ── TG ссылка с предзаполненным сообщением ───────────────────────────────────
+// ── TG ────────────────────────────────────────────────────────────────────────
 function updateTgBtn() {
   const name = currentProduct?.name || '';
   const size = selectedSize ? `, размер EU ${selectedSize}` : '';
@@ -344,11 +654,12 @@ function renderGallery(images) {
   g.innerHTML = images.map((img, i) =>
     `<img class="gallery-img ${i === 0 ? 'active' : ''}" src="${img}" onerror="this.style.display='none'">`
   ).join('') + (images.length > 1 ? `
-    <div class="gallery-dots">${images.map((_, i) => `<div class="dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>`).join('')}</div>
+    <div class="gallery-dots">${images.map((_, i) =>
+      `<div class="dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>`
+    ).join('')}</div>
     <button class="gallery-nav prev" onclick="prevSlide()">‹</button>
     <button class="gallery-nav next" onclick="nextSlide()">›</button>` : '');
 }
-
 function goToSlide(i) {
   document.querySelectorAll('.gallery-img').forEach((el, idx) => el.classList.toggle('active', idx === i));
   document.querySelectorAll('.dot').forEach((el, idx) => el.classList.toggle('active', idx === i));
@@ -357,10 +668,13 @@ function goToSlide(i) {
 function nextSlide() { goToSlide((galleryIndex + 1) % galleryImages.length); }
 function prevSlide() { goToSlide((galleryIndex - 1 + galleryImages.length) % galleryImages.length); }
 
+// ── Закрытие модалки + восстановление скролла ─────────────────────────────────
 document.getElementById('modalClose').addEventListener('click', () => {
   document.getElementById('modal').classList.remove('open');
-  document.getElementById('tgBtn').classList.remove('visible');
+  document.getElementById('bottomBar').classList.remove('visible');
   document.body.style.overflow = '';
+  // requestAnimationFrame гарантирует что DOM обновился до scrollTo [web:22]
+  requestAnimationFrame(() => window.scrollTo(0, savedScrollY));
 });
 
 loadProducts();

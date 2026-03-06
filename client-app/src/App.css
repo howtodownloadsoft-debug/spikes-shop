@@ -1,0 +1,53 @@
+/* ── Переходы между страницами ── */
+@keyframes pageIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .page-enter { animation: pageIn 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+  
+  /* ── Stagger-анимация карточек ── */
+  @keyframes cardStagger {
+    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+  }
+  .card-stagger {
+    opacity: 0;
+    animation: cardStagger 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+  
+  /* ── Плавное появление фото ── */
+  @keyframes imgFade { from { opacity: 0; } to { opacity: 1; } }
+  .img-fadein { animation: imgFade 0.2s ease forwards; }
+  
+  /* ── Shimmer для скелетона ── */
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, #1C1E24 25%, #262930 50%, #1C1E24 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  
+  /* ── Прыжок иконки корзины ── */
+  @keyframes cartPop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.5) rotate(-15deg); }
+    70%  { transform: scale(0.9) rotate(8deg); }
+    100% { transform: scale(1) rotate(0); }
+  }
+  .cart-pop { animation: cartPop 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+  
+  /* ── Пульс кнопки «В корзину» ── */
+  @keyframes addedPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+    70%  { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  }
+  .btn-added { animation: addedPulse 0.8s ease; }
+  
+  /* ── Убираем полосу прокрутки ── */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  
